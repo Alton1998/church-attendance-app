@@ -16,4 +16,4 @@ As far as the scope is concerned here we will decide on functionality based on t
 This screen allows you to create an attendance entry. For Example, you want to track attendance for recurring event say a class or course. The idea would be to create a unique ID for this event. Selecting this attendance routes  to a screen with all the required attendees.
 
 #### Attendees Screen
-The Attendees screen 
+The Attendees screen will contain a list of attendees where attendance can be marked and submitted.
