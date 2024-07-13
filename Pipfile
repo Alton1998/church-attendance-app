@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+kivy = "*"
+kivymd = "==1.1.1"
+python-dotenv = "*"
+pymongo = "*"
+bcrypt = "*"
+
+[dev-packages]
+black = "*"
+
+[requires]
+python_version = "3.12"
+python_full_version = "3.12.3"
