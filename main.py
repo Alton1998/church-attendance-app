@@ -1,23 +1,25 @@
+import logging
 import os
 
-from kivymd.app import MDApp
-from kivymd.uix.screenmanager import MDScreenManager
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.toolbar import MDTopAppBar
-from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.list import MDList, TwoLineListItem, OneLineListItem
-from kivymd.uix.button import MDFloatingActionButton
+import bcrypt
 from dotenv import load_dotenv
 from kivy.properties import ObjectProperty
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.button import MDRectangleFlatButton
-from pymongo import MongoClient
+from kivymd.app import MDApp
+from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationItem
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDFloatingActionButton, MDRectangleFlatButton
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem
 from kivymd.uix.menu import MDDropdownMenu
-import bcrypt
-from kivymd.uix.bottomnavigation import MDBottomNavigation,MDBottomNavigationItem
+from kivymd.uix.screen import MDScreen
+from kivymd.uix.screenmanager import MDScreenManager
+from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.textfield import MDTextField
+from kivymd.uix.toolbar import MDTopAppBar
+from pymongo import MongoClient
 
 load_dotenv()
+logger = logging.getLogger()
 ADMIN_MODE = True if os.getenv("ADMIN_MODE") == "TRUE" else False
 
 
@@ -93,16 +95,43 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
         for child in children:
             if isinstance(child, MDTextField):
                 cred[child.id] = child.text
-        client = MongoDBInstance.get_client()
-        db = client[os.getenv("MONGODB_NAME")]
-        app_users_collection = db["app_users"]
-        user_body = {
-            "username": cred["username"],
-            "gender": cred["gender"],
-            "password": bcrypt.hashpw(cred["password"].encode("utf8"), bcrypt.gensalt())
-        }
-        app_users_collection.insert_one(user_body)
-
+        if (
+            not cred["username"]
+            or not cred["gender"]
+            or not cred["password"]
+            or not cred["password"] == cred["confirm_password"]
+        ):
+            error_dialog = MDDialog(
+                text="Error!!! Ensure you have entered all fields and the passwords match"
+            )
+            error_dialog.open()
+            return
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            app_users_collection = db["app_users"]
+            user_body = {
+                "username": cred["username"],
+                "gender": cred["gender"],
+                "password": bcrypt.hashpw(
+                    cred["password"].encode("utf8"), bcrypt.gensalt()
+                ),
+                "status": "ACTIVE"
+            }
+            count = app_users_collection.count_documents({"username": cred["username"]})
+            if count > 0:
+                error_dialog = MDDialog(
+                    text="User with the same username already exists"
+                )
+                error_dialog.open()
+                return
+            app_users_collection.insert_one(user_body)
+            success_dialog = MDDialog(text="Successfully Added User")
+            success_dialog.open()
+        except Exception as e:
+            error_dialog = MDDialog(text="Internal Error")
+            error_dialog.open()
+            logging.error(e)
 
 
 class GenderTextField(MDTextField):
@@ -163,9 +192,12 @@ def build_sign_in_screen(screen_manager):
 
     return sign_in_screen
 
+
 class AttendanceSignUpBottomNavigationItem(MDBottomNavigationItem):
     screen_manager = ObjectProperty()
+
     def on_tab_press(self, *args) -> None:
+        self.screen_manager.transition.direction = "left"
         self.screen_manager.current = self.name
         super().on_tab_press()
 
@@ -176,8 +208,14 @@ def build_admin_sign_up_page(screen_manager):
     sign_up_screen_layout = MDBoxLayout(
         orientation="vertical", id="sign_in_screen_layout"
     )
-    sign_up_text_layout = MDBoxLayout(
-        orientation="vertical", spacing=50, padding=[0, 0, 0, 100],
+    sign_up_text_scroll_view = MDScrollView()
+    sign_up_text_layout = MDList(spacing=20)
+    sign_up_text_scroll_view.add_widget(sign_up_text_layout)
+    sign_up_user_name = MDTextField(
+        id="name",
+        hint_text="Name",
+        helper_text="Users Name",
+        helper_text_mode="on_focus",
     )
     sign_up_user_name_input = MDTextField(
         id="username",
@@ -188,7 +226,7 @@ def build_admin_sign_up_page(screen_manager):
     sign_up_user_password = MDTextField(
         id="password",
         hint_text="Password",
-        helper_text="Make the password",
+        helper_text="Make the password Strong",
         helper_text_mode="on_focus",
         password=True,
     )
@@ -199,15 +237,46 @@ def build_admin_sign_up_page(screen_manager):
         helper_text_mode="on_focus",
         password=True,
     )
-    sign_up_gender = GenderTextField(id="gender", hint_text="Gender", helper_text="Enter The Gender",
-                                     helper_text_mode="on_focus")
-    menu_items = [{"text": "Male", "viewclass": "GenderListItem", "gender_text_box": sign_up_gender},
-                  {"text": "Female", "viewclass": "GenderListItem", "gender_text_box": sign_up_gender}]
+    sign_up_gender = GenderTextField(
+        id="gender",
+        hint_text="Gender",
+        helper_text="Enter The Gender",
+        helper_text_mode="on_focus",
+    )
+    menu_items = [
+        {
+            "text": "Male",
+            "viewclass": "GenderListItem",
+            "gender_text_box": sign_up_gender,
+        },
+        {
+            "text": "Female",
+            "viewclass": "GenderListItem",
+            "gender_text_box": sign_up_gender,
+        },
+    ]
     sign_up_screen_bottom_navigation = MDBottomNavigation()
-    sign_up_screen_bottom_navigation.add_widget(AttendanceSignUpBottomNavigationItem(name="sign_up_screen",text="Add Users",icon="account-multiple-plus",screen_manager=screen_manager))
-    sign_up_screen_bottom_navigation.add_widget(AttendanceSignUpBottomNavigationItem(name="user_list_screen",text="Users",icon="account-box-multiple",screen_manager=screen_manager))
-    sign_up_gender_menu = MDDropdownMenu(caller=sign_up_gender, items=menu_items, width_mult=4)
+    sign_up_screen_bottom_navigation.add_widget(
+        AttendanceSignUpBottomNavigationItem(
+            name="sign_up_screen",
+            text="Add Users",
+            icon="account-multiple-plus",
+            screen_manager=screen_manager,
+        )
+    )
+    sign_up_screen_bottom_navigation.add_widget(
+        AttendanceSignUpBottomNavigationItem(
+            name="user_list_screen",
+            text="Users",
+            icon="account-box-multiple",
+            screen_manager=screen_manager,
+        )
+    )
+    sign_up_gender_menu = MDDropdownMenu(
+        caller=sign_up_gender, items=menu_items, width_mult=4
+    )
     sign_up_gender.menu = sign_up_gender_menu
+    sign_up_text_layout.add_widget(sign_up_user_name)
     sign_up_text_layout.add_widget(sign_up_user_name_input)
     sign_up_text_layout.add_widget(sign_up_user_password)
     sign_up_text_layout.add_widget(sign_up_confirm_user_password)
@@ -218,7 +287,7 @@ def build_admin_sign_up_page(screen_manager):
     sign_up_screen_layout.add_widget(sign_up_screen_top_app_bar)
     sign_up_screen.add_widget(sign_up_screen_bottom_navigation)
     sign_up_screen.add_widget(sign_up_screen_layout)
-    sign_up_screen_layout.add_widget(sign_up_text_layout)
+    sign_up_screen_layout.add_widget(sign_up_text_scroll_view)
 
     return sign_up_screen
 
@@ -233,13 +302,55 @@ class ChurchAttendanceApp(MDApp):
         return sm
 
 
+class UsersListScreen(MDScreen):
+    screen_manager = ObjectProperty()
+
+    def on_pre_enter(self, *args):
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            app_users_collection = db["app_users"]
+            users = app_users_collection.find()
+        except Exception as e:
+            error_dialog = MDDialog(text="Internal Error")
+            error_dialog.open()
+            logger.error(e)
+
+
+class UsersListTopAppBar(MDTopAppBar):
+    screen_manager = ObjectProperty()
+
+
+def back_navigation(obj):
+    sm = obj.parent.parent.parent.screen_manager
+    sm.transition.direction = "right"
+    sm.current = "sign_up_screen"
+
+
+def build_admin_users_list_page(sm):
+    users_list_screen = UsersListScreen(name="user_list_screen", screen_manager=sm)
+    users_list_screen_layout = MDBoxLayout(orientation="vertical")
+    users_list_screen_top_app_bar = UsersListTopAppBar(
+        title="Users List",
+        left_action_items=[["arrow-left", back_navigation]],
+        screen_manager=sm,
+    )
+    users_list_screen_layout.add_widget(users_list_screen_top_app_bar)
+    users_list_screen_scroll_view = MDScrollView()
+    users_list_screen_layout.add_widget(users_list_screen_scroll_view)
+    users_list = MDList()
+    users_list_screen_layout.add_widget(users_list)
+    users_list_screen.add_widget(users_list_screen_layout)
+    return users_list_screen
+
+
 class ChurchAttendanceAdminApp(MDApp):
     def build(self):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Teal"
         sm = MDScreenManager()
         sm.add_widget(build_admin_sign_up_page(sm))
-        sm.add_widget(MDScreen(name="user_list_screen"))
+        sm.add_widget(build_admin_users_list_page(sm))
         return sm
 
 

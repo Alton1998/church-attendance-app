@@ -12,6 +12,8 @@ bcrypt = "*"
 
 [dev-packages]
 black = "*"
+autopep8 = "*"
+isort = "*"
 
 [requires]
 python_version = "3.12"
