@@ -305,8 +305,7 @@ class ChurchAttendanceApp(MDApp):
 
 
 class UsersListItem(ThreeLineListItem):
-    def on_release(self):
-        print(self)
+    pass
 
 
 class UsersListScreen(MDScreen):
@@ -335,6 +334,7 @@ class UsersListScreen(MDScreen):
             error_dialog = MDDialog(text="Internal Error")
             error_dialog.open()
             logger.error(e)
+
     def on_leave(self, *args):
         scroll_view = None
         for child in self.children[0].children:
@@ -371,10 +371,6 @@ def build_admin_users_list_page(sm):
     return users_list_screen
 
 
-def build_user_details_page(sm):
-    return MDScreen()
-
-
 class ChurchAttendanceAdminApp(MDApp):
     def build(self):
         self.theme_cls.theme_style = "Dark"
@@ -382,7 +378,6 @@ class ChurchAttendanceAdminApp(MDApp):
         sm = MDScreenManager()
         sm.add_widget(build_admin_sign_up_page(sm))
         sm.add_widget(build_admin_users_list_page(sm))
-        sm.add_widget(build_user_details_page(sm))
         return sm
 
 

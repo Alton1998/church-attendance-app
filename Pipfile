@@ -14,6 +14,7 @@ bcrypt = "*"
 black = "*"
 autopep8 = "*"
 isort = "*"
+pyinstaller = "*"
 
 [requires]
 python_version = "3.12"
