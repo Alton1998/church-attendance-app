@@ -19,7 +19,7 @@ from kivymd.uix.toolbar import MDTopAppBar
 from pymongo import MongoClient
 
 load_dotenv()
-logger = logging.getLogger()
+logging.basicConfig(format='%(levelname)s - %(asctime)s: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG,filename="app.log")
 ADMIN_MODE = True if os.getenv("ADMIN_MODE") == "TRUE" else False
 
 
@@ -57,13 +57,26 @@ class AttendanceScreen(MDScreen):
 
     def on_pre_enter(self, *args):
         attendance_list = self.children[0].children[1].children[0]
-        print(attendance_list)
-        for i in range(100):
-            attendance_list.add_widget(
-                AttendanceListItem(
-                    text="First Text " + str(i), secondary_text="Second Text " + str(i)
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            attendance_collection = db["attendance_entries"]
+            attendance_entries = attendance_collection.find()
+            for attendance in attendance_entries:
+                attendance_list.add_widget(
+                    AttendanceListItem(
+                        text=attendance["name"],
+                        secondary_text=attendance["description"],
+                    )
                 )
-            )
+        except Exception as e:
+            error_dialog = MDDialog(text="Internal Error")
+            error_dialog.open()
+            logging.error(e)
+
+    def on_leave(self, *args):
+        attendance_list = self.children[0].children[1].children[0]
+        attendance_list.clear_widgets()
 
 
 class AttendeesScreen(MDScreen):
@@ -77,6 +90,7 @@ class AttendanceUserSignUpPage(MDScreen):
 
 
 class AttendanceSignInButton(MDRectangleFlatButton):
+    screen_manager = ObjectProperty()
 
     def on_release(self):
         children = self.parent.children
@@ -84,7 +98,17 @@ class AttendanceSignInButton(MDRectangleFlatButton):
         for child in children:
             if isinstance(child, MDTextField):
                 cred[child.id] = child.text
-        print(cred)
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            app_users_collection = db["app_users"]
+            user = app_users_collection.find_one({"username": cred["username"]})
+            if bcrypt.checkpw(cred["password"].encode("utf8"), user["password"]):
+                self.screen_manager.current = "attendance_screen"
+        except Exception as e:
+            error_dialog = MDDialog(text="Internal Error")
+            error_dialog.open()
+            logging.error(e)
 
 
 class AttendanceSignUpButton(MDRectangleFlatButton):
@@ -142,10 +166,12 @@ class GenderTextField(MDTextField):
     def on_focus(self, instance_text_field, focus: bool) -> None:
         if self.focus:
             self.menu.open()
-
+class AddAttendanceEntryFabButton(MDFloatingActionButton):
+    def on_release(self):
+        add_attendance_dialog = MDDialog
 
 def build_attendance_screen(screen_manger):
-    attendance_screen = AttendanceScreen()
+    attendance_screen = AttendanceScreen(name="attendance_screen")
     attendance_layout = MDBoxLayout(orientation="vertical", id="attendance_layout")
     attendance_top_app_bar = MDTopAppBar(title="Attendance Entries")
     attendance_scroll_view = MDScrollView()
@@ -153,7 +179,7 @@ def build_attendance_screen(screen_manger):
     attendance_scroll_view.add_widget(attendance_entries_list)
     attendance_layout.add_widget(attendance_top_app_bar)
     attendance_layout.add_widget(attendance_scroll_view)
-    attendance_action_button = MDFloatingActionButton(
+    attendance_action_button = AddAttendanceEntryFabButton(
         icon="plus", pos_hint={"center_x": 0.5}
     )
     attendance_layout.add_widget(attendance_action_button)
@@ -168,7 +194,7 @@ def build_sign_in_screen(screen_manager):
         orientation="vertical", id="sign_in_screen_layout"
     )
     sign_in_text_layout = MDBoxLayout(
-        orientation="vertical",
+        orientation="vertical", padding=[30, 0, 30, 300], spacing=50
     )
     sign_in_user_name_input = MDTextField(
         id="username",
@@ -186,7 +212,9 @@ def build_sign_in_screen(screen_manager):
     sign_in_text_layout.add_widget(sign_in_user_name_input)
     sign_in_text_layout.add_widget(sign_in_user_password)
     sign_in_text_layout.add_widget(
-        AttendanceSignInButton(text="Signin", size_hint=(1.0, None))
+        AttendanceSignInButton(
+            text="Signin", size_hint=(1.0, None), screen_manager=screen_manager
+        )
     )
     sign_in_screen_layout.add_widget(sign_in_screen_top_app_bar)
     sign_in_screen.add_widget(sign_in_screen_layout)
