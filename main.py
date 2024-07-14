@@ -9,7 +9,7 @@ from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationIt
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDFloatingActionButton, MDRectangleFlatButton
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem
+from kivymd.uix.list import MDList, OneLineListItem, ThreeLineListItem, TwoLineListItem
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
@@ -96,7 +96,8 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
             if isinstance(child, MDTextField):
                 cred[child.id] = child.text
         if (
-            not cred["username"] or not cred["name"]
+            not cred["username"]
+            or not cred["name"]
             or not cred["gender"]
             or not cred["password"]
             or not cred["password"] == cred["confirm_password"]
@@ -117,7 +118,7 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
                 "password": bcrypt.hashpw(
                     cred["password"].encode("utf8"), bcrypt.gensalt()
                 ),
-                "status": "ACTIVE"
+                "status": "ACTIVE",
             }
             count = app_users_collection.count_documents({"username": cred["username"]})
             if count > 0:
@@ -256,7 +257,7 @@ def build_admin_sign_up_page(screen_manager):
             "gender_text_box": sign_up_gender,
         },
     ]
-    sign_up_screen_bottom_navigation = MDBottomNavigation(size_hint=(1.0,0.2))
+    sign_up_screen_bottom_navigation = MDBottomNavigation(size_hint=(1.0, 0.2))
     sign_up_screen_bottom_navigation.add_widget(
         AttendanceSignUpBottomNavigationItem(
             name="sign_up_screen",
@@ -303,6 +304,11 @@ class ChurchAttendanceApp(MDApp):
         return sm
 
 
+class UsersListItem(ThreeLineListItem):
+    def on_release(self):
+        print(self)
+
+
 class UsersListScreen(MDScreen):
     screen_manager = ObjectProperty()
 
@@ -312,10 +318,30 @@ class UsersListScreen(MDScreen):
             db = client[os.getenv("MONGODB_NAME")]
             app_users_collection = db["app_users"]
             users = app_users_collection.find()
+            scroll_view = None
+            for child in self.children[0].children:
+                if isinstance(child, MDScrollView):
+                    scroll_view = child
+            users_list = scroll_view.children[0]
+            for user in users:
+                users_list.add_widget(
+                    UsersListItem(
+                        text=user["name"],
+                        secondary_text=user["username"],
+                        tertiary_text=user["status"],
+                    )
+                )
         except Exception as e:
             error_dialog = MDDialog(text="Internal Error")
             error_dialog.open()
             logger.error(e)
+    def on_leave(self, *args):
+        scroll_view = None
+        for child in self.children[0].children:
+            if isinstance(child, MDScrollView):
+                scroll_view = child
+        users_list = scroll_view.children[0]
+        users_list.children = []
 
 
 class UsersListTopAppBar(MDTopAppBar):
@@ -340,9 +366,13 @@ def build_admin_users_list_page(sm):
     users_list_screen_scroll_view = MDScrollView()
     users_list_screen_layout.add_widget(users_list_screen_scroll_view)
     users_list = MDList()
-    users_list_screen_layout.add_widget(users_list)
+    users_list_screen_scroll_view.add_widget(users_list)
     users_list_screen.add_widget(users_list_screen_layout)
     return users_list_screen
+
+
+def build_user_details_page(sm):
+    return MDScreen()
 
 
 class ChurchAttendanceAdminApp(MDApp):
@@ -352,6 +382,7 @@ class ChurchAttendanceAdminApp(MDApp):
         sm = MDScreenManager()
         sm.add_widget(build_admin_sign_up_page(sm))
         sm.add_widget(build_admin_users_list_page(sm))
+        sm.add_widget(build_user_details_page(sm))
         return sm
 
 
