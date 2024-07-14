@@ -96,7 +96,7 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
             if isinstance(child, MDTextField):
                 cred[child.id] = child.text
         if (
-            not cred["username"]
+            not cred["username"] or not cred["name"]
             or not cred["gender"]
             or not cred["password"]
             or not cred["password"] == cred["confirm_password"]
@@ -111,6 +111,7 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
             db = client[os.getenv("MONGODB_NAME")]
             app_users_collection = db["app_users"]
             user_body = {
+                "name": cred["name"],
                 "username": cred["username"],
                 "gender": cred["gender"],
                 "password": bcrypt.hashpw(
@@ -255,7 +256,7 @@ def build_admin_sign_up_page(screen_manager):
             "gender_text_box": sign_up_gender,
         },
     ]
-    sign_up_screen_bottom_navigation = MDBottomNavigation()
+    sign_up_screen_bottom_navigation = MDBottomNavigation(size_hint=(1.0,0.2))
     sign_up_screen_bottom_navigation.add_widget(
         AttendanceSignUpBottomNavigationItem(
             name="sign_up_screen",
@@ -285,9 +286,9 @@ def build_admin_sign_up_page(screen_manager):
         AttendanceSignUpButton(text="Add User", size_hint=(1.0, None))
     )
     sign_up_screen_layout.add_widget(sign_up_screen_top_app_bar)
-    sign_up_screen.add_widget(sign_up_screen_bottom_navigation)
     sign_up_screen.add_widget(sign_up_screen_layout)
     sign_up_screen_layout.add_widget(sign_up_text_scroll_view)
+    sign_up_screen_layout.add_widget(sign_up_screen_bottom_navigation)
 
     return sign_up_screen
 
