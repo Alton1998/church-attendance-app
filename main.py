@@ -231,6 +231,7 @@ class AttendanceSessionEntrySubmitButton(MDFlatButton):
 
 class AddAttendanceEntryFabButton(MDFloatingActionButton):
     attendance_list = ObjectProperty()
+
     def on_release(self):
         attendance_dialog_layout = MDBoxLayout(
             orientation="vertical", spacing="12dp", size_hint_y=None, height="120dp"
@@ -258,7 +259,7 @@ class AddAttendanceEntryFabButton(MDFloatingActionButton):
                     text="Submit",
                     attendance_name_text_field=attendance_dialog_name,
                     attendance_list=self.attendance_list,
-                    attendance_description_text = attendance_dialog_description
+                    attendance_description_text=attendance_dialog_description,
                 )
             ],
         )
@@ -275,7 +276,9 @@ def build_attendance_screen(screen_manger):
     attendance_layout.add_widget(attendance_top_app_bar)
     attendance_layout.add_widget(attendance_scroll_view)
     attendance_action_button = AddAttendanceEntryFabButton(
-        icon="plus", pos_hint={"center_x": 0.5}, attendance_list=attendance_entries_list,
+        icon="plus",
+        pos_hint={"center_x": 0.5},
+        attendance_list=attendance_entries_list,
     )
     attendance_layout.add_widget(attendance_action_button)
     attendance_screen.add_widget(attendance_layout)
