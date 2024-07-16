@@ -48,3 +48,4 @@ coll = COLLECT(exe, Tree('C:\\Users\\dsouz\\PycharmProjects\\church-attendance-a
                strip=False,
                upx=True,
                name='church_attendance_app')
+

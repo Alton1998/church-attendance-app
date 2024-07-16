@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 
@@ -7,25 +8,38 @@ from kivy.properties import ObjectProperty
 from kivymd.app import MDApp
 from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationItem
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDFloatingActionButton, MDRectangleFlatButton
+from kivymd.uix.button import (
+    MDFloatingActionButton,
+    MDRectangleFlatButton,
+    MDFlatButton,
+)
 from kivymd.uix.dialog import MDDialog
+from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDList, OneLineListItem, ThreeLineListItem, TwoLineListItem
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.snackbar import Snackbar
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
 from pymongo import MongoClient
 
 load_dotenv()
-logging.basicConfig(format='%(levelname)s - %(asctime)s: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG,filename="app.log")
+logging.basicConfig(
+    format="%(levelname)s - %(asctime)s: %(message)s",
+    datefmt="%H:%M:%S",
+    level=logging.DEBUG,
+    filename="app.log",
+)
 ADMIN_MODE = True if os.getenv("ADMIN_MODE") == "TRUE" else False
 
 
 # church F7hTLbKj2fbjljrz
 
 # mongodb+srv://church:F7hTLbKj2fbjljrz@cluster0.dwo9y43.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+
+current_user = None
 
 
 class MongoDBInstance:
@@ -65,12 +79,12 @@ class AttendanceScreen(MDScreen):
             for attendance in attendance_entries:
                 attendance_list.add_widget(
                     AttendanceListItem(
-                        text=attendance["name"],
-                        secondary_text=attendance["description"],
+                        text=attendance["attendance_name"],
+                        secondary_text=attendance["attendance_description"],
                     )
                 )
         except Exception as e:
-            error_dialog = MDDialog(text="Internal Error")
+            error_dialog = Snackbar(text="Internal Error")
             error_dialog.open()
             logging.error(e)
 
@@ -96,6 +110,10 @@ class AttendanceSignInButton(MDRectangleFlatButton):
         children = self.parent.children
         cred = dict()
         for child in children:
+            if not child.text:
+                error_dialog = Snackbar(text="Enter all Fields")
+                error_dialog.open()
+                return
             if isinstance(child, MDTextField):
                 cred[child.id] = child.text
         try:
@@ -103,10 +121,19 @@ class AttendanceSignInButton(MDRectangleFlatButton):
             db = client[os.getenv("MONGODB_NAME")]
             app_users_collection = db["app_users"]
             user = app_users_collection.find_one({"username": cred["username"]})
-            if bcrypt.checkpw(cred["password"].encode("utf8"), user["password"]):
+            if not user:
+                error_dialog = Snackbar(text="No such user")
+                error_dialog.open()
+            elif bcrypt.checkpw(cred["password"].encode("utf8"), user["password"]):
                 self.screen_manager.current = "attendance_screen"
+                global current_user
+                current_user = user["name"]
+                print(current_user)
+            else:
+                error_dialog = Snackbar(text="Incorrect Credentials")
+                error_dialog.open()
         except Exception as e:
-            error_dialog = MDDialog(text="Internal Error")
+            error_dialog = Snackbar(text="Internal Error")
             error_dialog.open()
             logging.error(e)
 
@@ -126,7 +153,7 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
             or not cred["password"]
             or not cred["password"] == cred["confirm_password"]
         ):
-            error_dialog = MDDialog(
+            error_dialog = Snackbar(
                 text="Error!!! Ensure you have entered all fields and the passwords match"
             )
             error_dialog.open()
@@ -146,16 +173,16 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
             }
             count = app_users_collection.count_documents({"username": cred["username"]})
             if count > 0:
-                error_dialog = MDDialog(
+                error_dialog = Snackbar(
                     text="User with the same username already exists"
                 )
                 error_dialog.open()
                 return
             app_users_collection.insert_one(user_body)
-            success_dialog = MDDialog(text="Successfully Added User")
+            success_dialog = Snackbar(text="Successfully Added User")
             success_dialog.open()
         except Exception as e:
-            error_dialog = MDDialog(text="Internal Error")
+            error_dialog = Snackbar(text="Internal Error")
             error_dialog.open()
             logging.error(e)
 
@@ -166,9 +193,77 @@ class GenderTextField(MDTextField):
     def on_focus(self, instance_text_field, focus: bool) -> None:
         if self.focus:
             self.menu.open()
-class AddAttendanceEntryFabButton(MDFloatingActionButton):
+
+
+class AttendanceSessionEntrySubmitButton(MDFlatButton):
+    attendance_name_text_field = ObjectProperty()
+    attendance_description_text = ObjectProperty()
+    attendance_list = ObjectProperty()
+
     def on_release(self):
-        add_attendance_dialog = MDDialog
+        if not self.attendance_name_text_field.text:
+            error_dialog = Snackbar(text="All entries must be entered")
+            error_dialog.open()
+            return
+        attendance_body = {
+            "attendance_name": self.attendance_name_text_field.text,
+            "attendance_description": self.attendance_description_text.text,
+            "created_by": current_user,
+            "created_on": datetime.datetime.now(datetime.timezone.utc),
+            "attendees": [],
+        }
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            attendance_entries_collection = db["attendance_entries"]
+            attendance_entries_collection.insert_one(attendance_body)
+            self.attendance_list.add_widget(
+                AttendanceListItem(
+                    text=attendance_body["attendance_name"],
+                    secondary_text=attendance_body["attendance_description"],
+                )
+            )
+        except Exception as e:
+            error_dialog = Snackbar(text="Internal Error")
+            error_dialog.open()
+            logging.error(e)
+
+
+class AddAttendanceEntryFabButton(MDFloatingActionButton):
+    attendance_list = ObjectProperty()
+    def on_release(self):
+        attendance_dialog_layout = MDBoxLayout(
+            orientation="vertical", spacing="12dp", size_hint_y=None, height="120dp"
+        )
+        attendance_dialog_name = MDTextField(
+            id="attendance_session_name",
+            hint_text="Attendance Session Name",
+            helper_text="Enter the Attendance Session Name",
+            helper_text_mode="on_focus",
+        )
+        attendance_dialog_description = MDTextField(
+            id="attendance_description",
+            hint_text="Attendance Description",
+            helper_text="Enter the Attendance Description",
+            helper_text_mode="on_focus",
+        )
+        attendance_dialog_layout.add_widget(attendance_dialog_name)
+        attendance_dialog_layout.add_widget(attendance_dialog_description)
+        add_attendance_dialog = MDDialog(
+            title="Attendance entry",
+            type="custom",
+            content_cls=attendance_dialog_layout,
+            buttons=[
+                AttendanceSessionEntrySubmitButton(
+                    text="Submit",
+                    attendance_name_text_field=attendance_dialog_name,
+                    attendance_list=self.attendance_list,
+                    attendance_description_text = attendance_dialog_description
+                )
+            ],
+        )
+        add_attendance_dialog.open()
+
 
 def build_attendance_screen(screen_manger):
     attendance_screen = AttendanceScreen(name="attendance_screen")
@@ -180,7 +275,7 @@ def build_attendance_screen(screen_manger):
     attendance_layout.add_widget(attendance_top_app_bar)
     attendance_layout.add_widget(attendance_scroll_view)
     attendance_action_button = AddAttendanceEntryFabButton(
-        icon="plus", pos_hint={"center_x": 0.5}
+        icon="plus", pos_hint={"center_x": 0.5}, attendance_list=attendance_entries_list,
     )
     attendance_layout.add_widget(attendance_action_button)
     attendance_screen.add_widget(attendance_layout)
@@ -359,9 +454,9 @@ class UsersListScreen(MDScreen):
                     )
                 )
         except Exception as e:
-            error_dialog = MDDialog(text="Internal Error")
+            error_dialog = Snackbar(text="Internal Error")
             error_dialog.open()
-            logger.error(e)
+            logging.error(e)
 
     def on_leave(self, *args):
         scroll_view = None
