@@ -54,6 +54,7 @@ class AttendanceListItem(TwoLineListItem):
     screen_manager = ObjectProperty()
 
     def on_release(self):
+        self.screen_manager.get_screen("attendees_screen").attendance_name=self.text
         self.screen_manager.current = "attendees_screen"
 
 
@@ -79,7 +80,7 @@ class AttendanceScreen(MDScreen):
                     AttendanceListItem(
                         text=attendance["attendance_name"],
                         secondary_text=attendance["attendance_description"],
-                        screen_manager = self.screen_manager
+                        screen_manager=self.screen_manager,
                     )
                 )
         except Exception as e:
@@ -189,9 +190,24 @@ class GenderTextField(MDTextField):
             self.menu.open()
 
 
-class AddAttendanceEntryButton(MDRectangleFlatButton):
+class AddAttendeesSubmitButton(MDFlatButton):
+    pass
+
+class AddAttendeesEntryButton(MDRectangleFlatButton):
     def on_release(self):
-        pass
+        dialog_layout = MDBoxLayout(
+            orientation="vertical", spacing="12dp", size_hint_y=None, height="220dp"
+        )
+        dialog_scroll_view = MDScrollView()
+        dialog_list = MDList()
+        dialog_layout.add_widget(dialog_scroll_view)
+        dialog_scroll_view.add_widget(dialog_list)
+        dialog_list.add_widget(MDTextField())
+        dialog = MDDialog(title="Attendees",
+            type="custom",
+            content_cls=dialog_layout,buttons=[
+                AddAttendeesSubmitButton(text="Submit")
+            ])
 
 
 class AttendanceSessionEntrySubmitButton(MDFlatButton):
@@ -221,7 +237,7 @@ class AttendanceSessionEntrySubmitButton(MDFlatButton):
                 AttendanceListItem(
                     text=attendance_body["attendance_name"],
                     secondary_text=attendance_body["attendance_description"],
-                    screen_manager=self.screen_manager
+                    screen_manager=self.screen_manager,
                 )
             )
         except Exception as e:
@@ -233,6 +249,7 @@ class AttendanceSessionEntrySubmitButton(MDFlatButton):
 class AddAttendanceEntryFabButton(MDFloatingActionButton):
     attendance_list = ObjectProperty()
     screen_manager = ObjectProperty()
+
     def on_release(self):
         attendance_dialog_layout = MDBoxLayout(
             orientation="vertical", spacing="12dp", size_hint_y=None, height="120dp"
@@ -261,7 +278,7 @@ class AddAttendanceEntryFabButton(MDFloatingActionButton):
                     attendance_name_text_field=attendance_dialog_name,
                     attendance_list=self.attendance_list,
                     attendance_description_text=attendance_dialog_description,
-                    screen_manager=self.screen_manager
+                    screen_manager=self.screen_manager,
                 )
             ],
         )
@@ -269,7 +286,9 @@ class AddAttendanceEntryFabButton(MDFloatingActionButton):
 
 
 def build_attendance_screen(screen_manager):
-    attendance_screen = AttendanceScreen(name="attendance_screen",screen_manager=screen_manager)
+    attendance_screen = AttendanceScreen(
+        name="attendance_screen", screen_manager=screen_manager
+    )
     attendance_layout = MDBoxLayout(orientation="vertical", id="attendance_layout")
     attendance_top_app_bar = MDTopAppBar(title="Attendance Entries")
     attendance_scroll_view = MDScrollView()
@@ -281,7 +300,7 @@ def build_attendance_screen(screen_manager):
         icon="plus",
         pos_hint={"center_x": 0.5},
         attendance_list=attendance_entries_list,
-        screen_manager=screen_manager
+        screen_manager=screen_manager,
     )
     attendance_layout.add_widget(attendance_action_button)
     attendance_screen.add_widget(attendance_layout)
@@ -509,7 +528,15 @@ class AttendeesScreen(MDScreen):
             client = MongoDBInstance.get_client()
             db = client[os.getenv("MONGODB_NAME")]
             attendance_entries_collection = db["attendance_entries"]
-            attendance_entries_collection.find_one({})
+            attendance_session = attendance_entries_collection.find_one({"attendance_name":self.attendance_name})
+            scroll_view = None
+            for child in self.children[0].children:
+                if isinstance(child,MDScrollView):
+                    scroll_view = child
+                    break
+            attendees_list = scroll_view.children[0]
+            for attendance_entry in attendance_session["attendees"]:
+                attendees_list.add(AttendeesListItem(text=attendance_entry))
         except Exception as e:
             error_dialog = Snackbar(text="Internal Error")
             error_dialog.open()
@@ -520,17 +547,36 @@ class AttendeesListItem(OneLineListItem):
     pass
 
 
+class SubmitAttendanceButton(MDRectangleFlatButton):
+    def on_release(self):
+        pass
+
+
+class RemoveAttendeesButton(MDRectangleFlatButton):
+    def on_release(self):
+        pass
+
+
 def build_attendees_screen(sm):
     attendees_screen = AttendeesScreen(name="attendees_screen")
     attendees_screen_layout = MDBoxLayout(orientation="vertical")
     attendees_screen_layout.add_widget(MDTopAppBar(title="Attendees"))
-    attendees_button_layout = MDBoxLayout(orientation="horizontal")
+    attendees_button_layout = MDBoxLayout(
+        orientation="horizontal", spacing="10dp", padding=[10, 10, 10, 10]
+    )
     attendees_screen_scrollview = MDScrollView()
     attendees_list = MDList()
     attendees_screen_scrollview.add_widget(attendees_list)
     attendees_screen_layout.add_widget(attendees_screen_scrollview)
-
-    attendees_button_layout.add_widget(AddAttendanceEntryButton(text="Add Attendee"))
+    attendees_button_layout.add_widget(
+        AddAttendeesEntryButton(text="Add Attendee", size_hint=(0.5, None))
+    )
+    attendees_button_layout.add_widget(
+        SubmitAttendanceButton(text="Submit Attendance", size_hint=(0.5, None))
+    )
+    attendees_button_layout.add_widget(
+        RemoveAttendeesButton(text="Remove Attendee", size_hint=(0.5, None))
+    )
     attendees_screen_layout.add_widget(attendees_button_layout)
     attendees_screen.add_widget(attendees_screen_layout)
     return attendees_screen
