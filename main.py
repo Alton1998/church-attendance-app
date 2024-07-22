@@ -6,14 +6,15 @@ import bcrypt
 from dotenv import load_dotenv
 from kivy.properties import ObjectProperty, StringProperty
 from kivymd.app import MDApp
-from kivymd.uix.bottomnavigation import (MDBottomNavigation,
-                                         MDBottomNavigationItem)
+from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationItem
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import (MDFlatButton, MDFloatingActionButton,
-                               MDRectangleFlatButton)
+from kivymd.uix.button import (
+    MDFlatButton,
+    MDFloatingActionButton,
+    MDRectangleFlatButton,
+)
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.list import (MDList, OneLineListItem, ThreeLineListItem,
-                             TwoLineListItem)
+from kivymd.uix.list import MDList, OneLineListItem, ThreeLineListItem, TwoLineListItem
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
@@ -31,7 +32,6 @@ logging.basicConfig(
     filename="app.log",
 )
 ADMIN_MODE = True if os.getenv("ADMIN_MODE") == "TRUE" else False
-
 
 # church F7hTLbKj2fbjljrz
 
@@ -54,7 +54,7 @@ class AttendanceListItem(TwoLineListItem):
     screen_manager = ObjectProperty()
 
     def on_release(self):
-        self.screen_manager.get_screen("attendees_screen").attendance_name=self.text
+        self.screen_manager.get_screen("attendees_screen").attendance_name = self.text
         self.screen_manager.current = "attendees_screen"
 
 
@@ -142,11 +142,11 @@ class AttendanceSignUpButton(MDRectangleFlatButton):
             if isinstance(child, MDTextField):
                 cred[child.id] = child.text
         if (
-            not cred["username"]
-            or not cred["name"]
-            or not cred["gender"]
-            or not cred["password"]
-            or not cred["password"] == cred["confirm_password"]
+                not cred["username"]
+                or not cred["name"]
+                or not cred["gender"]
+                or not cred["password"]
+                or not cred["password"] == cred["confirm_password"]
         ):
             error_dialog = Snackbar(
                 text="Error!!! Ensure you have entered all fields and the passwords match"
@@ -193,6 +193,7 @@ class GenderTextField(MDTextField):
 class AddAttendeesSubmitButton(MDFlatButton):
     pass
 
+
 class AddAttendeesEntryButton(MDRectangleFlatButton):
     def on_release(self):
         dialog_layout = MDBoxLayout(
@@ -202,12 +203,13 @@ class AddAttendeesEntryButton(MDRectangleFlatButton):
         dialog_list = MDList()
         dialog_layout.add_widget(dialog_scroll_view)
         dialog_scroll_view.add_widget(dialog_list)
-        dialog_list.add_widget(MDTextField())
-        dialog = MDDialog(title="Attendees",
+        dialog = MDDialog(
+            title="Attendees",
             type="custom",
-            content_cls=dialog_layout,buttons=[
-                AddAttendeesSubmitButton(text="Submit")
-            ])
+            content_cls=dialog_layout,
+            buttons=[AddAttendeesSubmitButton(text="Submit")],
+        )
+        dialog.open()
 
 
 class AttendanceSessionEntrySubmitButton(MDFlatButton):
@@ -422,6 +424,14 @@ def build_admin_sign_up_page(screen_manager):
             screen_manager=screen_manager,
         )
     )
+    sign_up_screen_bottom_navigation.add_widget(
+        AttendanceSignUpBottomNavigationItem(
+            name="attendees_list_screen",
+            text="Attendees",
+            icon="account-multiple-outline",
+            screen_manager=screen_manager,
+        )
+    )
     sign_up_gender_menu = MDDropdownMenu(
         caller=sign_up_gender, items=menu_items, width_mult=4
     )
@@ -454,7 +464,11 @@ class ChurchAttendanceApp(MDApp):
 
 
 class UsersListItem(ThreeLineListItem):
-    pass
+    screen_manager = ObjectProperty()
+    screen = ObjectProperty()
+
+    def on_release(self):
+        self.screen_manager.current = "user_info_screen"
 
 
 class UsersListScreen(MDScreen):
@@ -477,6 +491,7 @@ class UsersListScreen(MDScreen):
                         text=user["name"],
                         secondary_text=user["username"],
                         tertiary_text=user["status"],
+                        screen_manager=self.screen_manager,
                     )
                 )
         except Exception as e:
@@ -528,10 +543,12 @@ class AttendeesScreen(MDScreen):
             client = MongoDBInstance.get_client()
             db = client[os.getenv("MONGODB_NAME")]
             attendance_entries_collection = db["attendance_entries"]
-            attendance_session = attendance_entries_collection.find_one({"attendance_name":self.attendance_name})
+            attendance_session = attendance_entries_collection.find_one(
+                {"attendance_name": self.attendance_name}
+            )
             scroll_view = None
             for child in self.children[0].children:
-                if isinstance(child,MDScrollView):
+                if isinstance(child, MDScrollView):
                     scroll_view = child
                     break
             attendees_list = scroll_view.children[0]
@@ -582,6 +599,148 @@ def build_attendees_screen(sm):
     return attendees_screen
 
 
+class AdminAttendeesScreen(MDScreen):
+    attendee_list = ObjectProperty()
+
+    def on_pre_enter(self, *args):
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            attendees_entries_collection = db["attendees"]
+            for attendee in attendees_entries_collection.find():
+                self.attendee_list.add_widget(
+                    AttendeesListItem(text=attendee["attendee_name"])
+                )
+        except Exception as e:
+            error_dialog = Snackbar(text="Internal Error")
+            error_dialog.open()
+            logging.error(e)
+
+    def on_leave(self, *args):
+        self.attendee_list.clear_widgets()
+
+
+class AttendeesListTopAppBar(MDTopAppBar):
+    screen_manager = ObjectProperty()
+
+
+class SubmitAttendeesEntry(MDFlatButton):
+    attendee_name_text_field = ObjectProperty()
+    attendee_email_text_field = ObjectProperty()
+    attendee_list = ObjectProperty()
+
+    def on_release(self):
+        if (
+                not self.attendee_email_text_field.text
+                or not self.attendee_name_text_field.text
+        ):
+            error_dialog = Snackbar(text="Enter all the necessary Fields")
+            error_dialog.open()
+            return
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            attendees_collection = db["attendees"]
+            if (
+                    attendees_collection.count_documents(
+                        {"attendee_email": self.attendee_email_text_field.text}
+                    )
+                    >= 1
+            ):
+                error_dialog = Snackbar(text="Attendee Already Exists")
+                error_dialog.open()
+            else:
+                attendees_collection.insert_one(
+                    {
+                        "attendee_email": self.attendee_email_text_field.text,
+                        "attendee_name": self.attendee_name_text_field.text,
+                    }
+                )
+                self.attendee_list.add_widget(
+                    AttendeesListItem(text=self.attendee_name_text_field.text)
+                )
+        except Exception as e:
+            error_dialog = Snackbar(text="Internal Error")
+            error_dialog.open()
+
+
+class AddAttendeesFloatButton(MDFloatingActionButton):
+    attendee_list = ObjectProperty()
+
+    def on_release(self):
+        attendance_dialog_layout = MDBoxLayout(
+            orientation="vertical", spacing="12dp", size_hint_y=None, height="120dp"
+        )
+        attendees_scroll_view = MDScrollView()
+        attendees_list = MDList()
+        attendance_dialog_layout.add_widget(attendees_scroll_view)
+        attendees_scroll_view.add_widget(attendees_list)
+        attendee_name_text_field = MDTextField(
+            id="name",
+            hint_text="Name of the Attendee",
+            helper_text="Name of the Attendee",
+            helper_text_mode="on_focus",
+        )
+        attendee_email_text_field = MDTextField(
+            id="email",
+            hint_text="Email of the Attendee",
+            helper_text="Email of the Attende",
+            helper_text_mode="on_focus",
+        )
+        attendees_list.add_widget(attendee_name_text_field)
+        attendees_list.add_widget(attendee_email_text_field)
+        add_attendees_dialog = MDDialog(
+            title="Attendees Entry",
+            type="custom",
+            content_cls=attendance_dialog_layout,
+            buttons=[
+                SubmitAttendeesEntry(
+                    text="Submit",
+                    attendee_name_text_field=attendee_name_text_field,
+                    attendee_email_text_field=attendee_email_text_field,
+                    attendee_list=self.attendee_list,
+                )
+            ],
+        )
+        add_attendees_dialog.open()
+
+
+def build_admin_attendees_screen(sm):
+    attendees_screen = AdminAttendeesScreen(name="attendees_list_screen")
+    attendees_screen_layout = MDBoxLayout(orientation="vertical")
+    attendees_screen_top_app_bar = AttendeesListTopAppBar(
+        title="Attendees List",
+        left_action_items=[["arrow-left", back_navigation]],
+        screen_manager=sm,
+    )
+    attendees_screen.add_widget(attendees_screen_layout)
+    attendees_screen_layout.add_widget(attendees_screen_top_app_bar)
+    attendees_screen_scroll_view = MDScrollView()
+    attendees_list = MDList()
+    attendees_screen.attendee_list = attendees_list
+    attendees_screen_scroll_view.add_widget(attendees_list)
+    attendees_screen_layout.add_widget(attendees_screen_scroll_view)
+    attendees_screen_layout.add_widget(
+        AddAttendeesFloatButton(
+            icon="plus", pos_hint={"center_x": 0.5}, attendee_list=attendees_list
+        )
+    )
+    return attendees_screen
+
+
+class UserInfoTopAppBar(MDTopAppBar):
+    pass
+
+
+def build_admin_user_info_screen(screen_manager):
+    user_info_screen = MDScreen(name="user_info_screen")
+    user_info_layout = MDBoxLayout(orientation="vertical")
+    user_info_top_app_bar = UserInfoTopAppBar(title="User Info")
+    user_info_layout.add_widget(user_info_top_app_bar)
+    user_info_screen.add_widget(user_info_layout)
+    return user_info_screen
+
+
 class ChurchAttendanceAdminApp(MDApp):
     def build(self):
         self.theme_cls.theme_style = "Dark"
@@ -589,6 +748,8 @@ class ChurchAttendanceAdminApp(MDApp):
         sm = MDScreenManager()
         sm.add_widget(build_admin_sign_up_page(sm))
         sm.add_widget(build_admin_users_list_page(sm))
+        sm.add_widget(build_admin_attendees_screen(sm))
+        sm.add_widget(build_admin_user_info_screen(sm))
         return sm
 
 
