@@ -468,6 +468,12 @@ class UsersListItem(ThreeLineListItem):
     screen = ObjectProperty()
 
     def on_release(self):
+        screen = self.screen_manager.get_screen("user_info_screen")
+        screen.user = {
+            "name":self.text,
+            "email":self.secondary_text,
+            "status":self.tertiary_text
+        }
         self.screen_manager.current = "user_info_screen"
 
 
@@ -729,15 +735,113 @@ def build_admin_attendees_screen(sm):
 
 
 class UserInfoTopAppBar(MDTopAppBar):
-    pass
+    screen_manager = ObjectProperty()
+
+
+def user_info_back_navigation(obj):
+    sm = obj.parent.parent.parent.screen_manager
+    sm.transition.direction = "right"
+    sm.current = "user_list_screen"
+
+
+class UpdateUserDetailsButton(MDRectangleFlatButton):
+
+    def on_release(self):
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            user_collection = db["app_users"]
+            user_collection.update_one({"username":})
+        except Exception as e:
+
+
+
+class DeleteUserDetailsButton(MDRectangleFlatButton):
+    def on_release(self):
+        pass
+
+
+class UserInfoScreen(MDScreen):
+    user = ObjectProperty()
+    name_text_field = ObjectProperty()
+    email_text_field = ObjectProperty()
+    gender_text_field = ObjectProperty()
+    active_text_field = ObjectProperty()
+    password_text_field = ObjectProperty()
+    def on_pre_enter(self, *args):
+        try:
+            client = MongoDBInstance.get_client()
+            db = client[os.getenv("MONGODB_NAME")]
+            users_collection = db["app_users"]
+            user_detail = users_collection.find_one({
+                "username": self.user["email"]
+            })
+            self.name_text_field.text = user_detail["name"]
+            self.email_text_field.text = user_detail["username"]
+            self.gender_text_field.text = user_detail["gender"]
+            self.active_text_field.text = user_detail["status"]
+            self.password_text_field.text = user_detail["password"]
+        except Exception as e:
+            error_dialog = Snackbar(text="Internal Error")
+            error_dialog.open()
 
 
 def build_admin_user_info_screen(screen_manager):
-    user_info_screen = MDScreen(name="user_info_screen")
+    user_info_screen = UserInfoScreen(name="user_info_screen")
     user_info_layout = MDBoxLayout(orientation="vertical")
-    user_info_top_app_bar = UserInfoTopAppBar(title="User Info")
+    user_info_top_app_bar = UserInfoTopAppBar(
+        title="User Info",
+        left_action_items=[["arrow-left", user_info_back_navigation]],
+        screen_manager=screen_manager,
+    )
     user_info_layout.add_widget(user_info_top_app_bar)
     user_info_screen.add_widget(user_info_layout)
+    user_scroll_view = MDScrollView()
+    user_info_layout.add_widget(user_scroll_view)
+    user_info_list = MDList(spacing=30)
+    user_scroll_view.add_widget(user_info_list)
+    user_name_text_field = MDTextField(
+        id="name",
+        hint_text="Name of User",
+        helper_text="Name of User",
+        helper_text_mode="on_focus",
+    )
+    user_info_screen.name_text_field = user_name_text_field
+    email_text_field = MDTextField(
+        id="email", hint_text="Email", helper_text="Email", helper_text_mode="on_focus"
+    )
+    user_info_screen.email_text_field = email_text_field
+    gender = MDTextField(
+        id="gender",
+        hint_text="Gender",
+        helper_text="Gender",
+        helper_text_mode="on_focus",
+    )
+    user_info_screen.gender_text_field = gender
+    password = MDTextField(
+        id="password",
+        hint_text="Password",
+        helper_text="Password",
+        helper_text_mode="on_focus",
+        password=True,
+    )
+    user_info_screen.password_text_field = password
+    active_text_field = MDTextField(
+        id="active_status",
+        hint_text="STATUS",
+        helper_text="STATUS",
+        helper_text_mode="on_focus"
+    )
+    user_info_screen.active_text_field = active_text_field
+    update_button = UpdateUserDetailsButton(text="Update", size_hint=(1.0, None))
+    delete_button = DeleteUserDetailsButton(text="Delete", size_hint=(1.0, None))
+    user_info_list.add_widget(user_name_text_field)
+    user_info_list.add_widget(email_text_field)
+    user_info_list.add_widget(gender)
+    user_info_list.add_widget(password)
+    user_info_list.add_widget(active_text_field)
+    user_info_list.add_widget(update_button)
+    user_info_list.add_widget(delete_button)
     return user_info_screen
 
 
