@@ -24,3 +24,12 @@ The Attendees screen will contain a list of attendees where attendance can be ma
 3. We start by first setting up the database. Go to the below website and setup your free database accordingly.
 ![Screenshot 2024-08-26 075330](https://github.com/user-attachments/assets/1f7f80e1-fdcc-4853-95b7-34a4e369a3dc)
 ![Screenshot 2024-08-26 075554](https://github.com/user-attachments/assets/5d1f3e46-8416-4345-9291-47cc1d77870f)
+![Screenshot 2024-08-26 075702](https://github.com/user-attachments/assets/e31a46cf-46e7-43b8-9160-d2432140d486)
+![Screenshot 2024-08-26 080040](https://github.com/user-attachments/assets/06ab61a0-910b-4c08-9d07-014f4b07b9f3)
+![Screenshot 2024-08-26 080142](https://github.com/user-attachments/assets/478a49dd-e47a-4c71-92a2-fbe7eaf42144)
+![Screenshot 2024-08-26 080338](https://github.com/user-attachments/assets/7a65d570-fedc-4f09-8e76-94a0c12c3b53)
+![Screenshot 2024-08-26 080359](https://github.com/user-attachments/assets/264118ab-7ab8-44ae-9805-f9934d276bfe)
+
+![Screenshot 2024-08-26 081316](https://github.com/user-attachments/assets/cce90a07-b543-45c4-9a8d-6168997da30b)
+
+
