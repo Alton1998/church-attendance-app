@@ -23,6 +23,8 @@ The Attendees screen will contain a list of attendees where attendance can be ma
 2. The `.exe` file is your application while the `.env` file is the file that allows you to connect to a particular database or shift between application modes and admin modes.
 3. We start by first setting up the database. Go to the below website and setup your free database accordingly.
 ![Screenshot 2024-08-26 075330](https://github.com/user-attachments/assets/1f7f80e1-fdcc-4853-95b7-34a4e369a3dc)
-![Screenshot 2024-08-26 075330](https://github.com/user-attachments/assets/fc293665-a7a4-4e50-901f-566dd9de810e)
+![Screenshot 2024-08-26 075554](https://github.com/user-attachments/assets/5d1f3e46-8416-4345-9291-47cc1d77870f)
 
 
+
+![Screenshot 2024-08-26 075554](https://github.com/user-attachments/assets/fd956c25-0f0a-47e0-a8a8-9c1fd60075d6)
