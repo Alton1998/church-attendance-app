@@ -33,4 +33,8 @@ The Attendees screen will contain a list of attendees where attendance can be ma
 ![Screenshot 2024-08-26 081316](https://github.com/user-attachments/assets/cce90a07-b543-45c4-9a8d-6168997da30b)
 
 ![Screenshot 2024-08-26 081413](https://github.com/user-attachments/assets/8b4a7516-05dc-46c5-9671-7a1143a7330d)
+![Screenshot 2024-08-26 081439](https://github.com/user-attachments/assets/63244dd2-f20b-4d30-ad4b-b27f51148c18)
+![Screenshot 2024-08-26 081527](https://github.com/user-attachments/assets/62e60fc4-9b50-4861-a7ea-9e73f16e39cf)
+![Screenshot 2024-08-26 081751](https://github.com/user-attachments/assets/0390e4cd-6cbb-4e6a-a600-b72ff2d45225)
+
 
