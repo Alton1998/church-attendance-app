@@ -22,6 +22,7 @@ The Attendees screen will contain a list of attendees where attendance can be ma
 1. You would have got an `.exe` file and a `.env` file
 2. The `.exe` file is your application while the `.env` file is the file that allows you to connect to a particular database or shift between application modes and admin modes.
 3. We start by first setting up the database. Go to the below website and setup your free database accordingly.
+4. To Switch between Admin mode and applicate just set false or true in the .env files
 ![Screenshot 2024-08-26 075330](https://github.com/user-attachments/assets/1f7f80e1-fdcc-4853-95b7-34a4e369a3dc)
 ![Screenshot 2024-08-26 075554](https://github.com/user-attachments/assets/5d1f3e46-8416-4345-9291-47cc1d77870f)
 ![Screenshot 2024-08-26 075702](https://github.com/user-attachments/assets/e31a46cf-46e7-43b8-9160-d2432140d486)
@@ -40,5 +41,12 @@ The Attendees screen will contain a list of attendees where attendance can be ma
 ![Screenshot 2024-08-26 081927](https://github.com/user-attachments/assets/0a7317cf-5569-4b7f-bfde-acf833cfdd21)
 
 ![Screenshot 2024-08-26 082414](https://github.com/user-attachments/assets/8b552fef-8220-4642-9bb9-51c80f5d9d2f)
+
+## Feedback So far
+
+1. Need to add Mass Timing
+2. Need to add Mass date
+3. Store Telephone number of the Attendees
+
 
 
